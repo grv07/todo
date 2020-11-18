@@ -102,14 +102,17 @@ impl<'a> IOManager<'a> {
 
     pub fn print_task_to_cli(&self) {
         match self.get_all_tasks() {
-            Ok(tasks)  => {
-                for task in tasks.unwrap() {
-                    task.print_task();
+            Ok(tasks) => {
+                if let Some(tasks) = tasks {
+                    for task in tasks {
+                        task.print_task();
+                    }
                 }
-            },
-            Err(e) => {
-                println!("An error occured on geting tasks: {}", e)
+                else {
+                    println!("There is no task created yet.");
+                }
             }
+            Err(e) => println!("An error occured on geting tasks: {}", e),
         }
     }
 }
