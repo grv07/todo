@@ -12,11 +12,17 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn new(id: String, desc: String) -> Self {
+    pub fn new(desc: String) -> Self {
+        let mut id = Uuid::new_v4().to_string();
+        id.truncate(8);
         Self {
             id: id,
             description: desc,
         }
+    }
+
+    fn print_task(&self) {
+        println!("[{}]: {}", self.id, self.description);
     }
 }
 
@@ -25,13 +31,13 @@ pub struct IOManager<'a> {
 }
 
 impl<'a> IOManager<'a> {
-    fn new(file_path: &'a Path) -> Self {
+    pub fn new(file_path: &'a Path) -> Self {
         Self {
             file_path: file_path,
         }
     }
 
-    fn remove_file(&self){
+    fn remove_file(&self) {
         match std::fs::remove_file(self.file_path) {
             Ok(ok) => ok,
             Err(e) => println!("An error occured on removing tasks file: {}", e),
@@ -93,6 +99,19 @@ impl<'a> IOManager<'a> {
             Err(e) => println!("An error occured on geting tasks: {}", e),
         }
     }
+
+    pub fn print_task_to_cli(&self) {
+        match self.get_all_tasks() {
+            Ok(tasks)  => {
+                for task in tasks.unwrap() {
+                    task.print_task();
+                }
+            },
+            Err(e) => {
+                println!("An error occured on geting tasks: {}", e)
+            }
+        }
+    }
 }
 
 mod test {
@@ -100,14 +119,12 @@ mod test {
 
     #[test]
     fn write_tasks() {
-        let t1 = Task::new(String::from("45"), "write_tasks 1 ".to_string());
-        let t2 = Task::new(String::from("42"), "write_tasks 2".to_string());
+        let t1 = Task::new("write_tasks 1 ".to_string());
+        let t2 = Task::new("write_tasks 2".to_string());
 
         let io_manager = IOManager::new(&Path::new("./tasks1.json"));
         io_manager.write_task(vec![t1, t2]);
-        
         let al_task_from_file = io_manager.get_all_tasks().unwrap().unwrap();
-        
         assert_eq!(al_task_from_file[0].id, "45");
         assert_eq!(al_task_from_file[1].id, "42");
         io_manager.remove_file();
@@ -115,15 +132,13 @@ mod test {
 
     #[test]
     fn remove_tasks() {
-        let t1 = Task::new(String::from("42"), "remove_tasks 1".to_string());
-        let t2 = Task::new(String::from("45"), "remove_tasks 2".to_string());
+        let t1 = Task::new("remove_tasks 1".to_string());
+        let t2 = Task::new("remove_tasks 2".to_string());
 
         let io_manager = IOManager::new(&Path::new("./tasks2.json"));
         io_manager.write_task(vec![t1, t2]);
         io_manager.remove_tasks(vec!["45".to_string()]);
-        
         let al_task_from_file = io_manager.get_all_tasks().unwrap().unwrap();
-        
         assert_eq!(al_task_from_file[0].id, "42");
         io_manager.remove_file();
     }
