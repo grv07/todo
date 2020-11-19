@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Write};
-use std::path::Path;
 use uuid::Uuid;
+
+use std::fs::{File, OpenOptions};
+use std::io::{Error, Read, Write};
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Task {
@@ -61,7 +62,7 @@ impl<'a> IOManager<'a> {
         }
     }
 
-    fn get_all_tasks(&self) -> Result<Option<Vec<Task>>, std::io::Error> {
+    fn get_all_tasks(&self) -> Result<Option<Vec<Task>>, Error> {
         if let Some(mut file) = self.get_file() {
             let mut data_string = String::new();
             file.read_to_string(&mut data_string)?;
@@ -75,28 +76,28 @@ impl<'a> IOManager<'a> {
         Ok(None)
     }
 
-    pub fn write_task(&self, tasks: Vec<Task>) {
+    pub fn write_task(&self, tasks: Vec<Task>) -> Result<(), Error> {
         if let Some(mut file) = self.get_file() {
             for task in tasks {
                 let task = serde_json::to_string(&task).unwrap();
-                if let Ok(_) = writeln!(file, "{}>", task) {
-                    println!("Successfully write task {:?} to file: {:?}", task, file);
-                }
+                writeln!(file, "{}>", task)?;
             }
         }
+        Ok(())
     }
 
-    pub fn remove_tasks(&self, ids: Vec<String>) {
+    pub fn remove_tasks(&self, ids: Vec<String>) -> Result<(), Error> {
         match self.get_all_tasks() {
             Ok(Some(mut tasks)) => {
                 tasks.retain(|x| !ids.contains(&x.id));
                 self.remove_file();
                 if tasks.len() > 0 {
-                    self.write_task(tasks);
+                    return self.write_task(tasks);
                 }
+                Ok(())
             }
-            Ok(_) => {}
-            Err(e) => println!("An error occured on geting tasks: {}", e),
+            Ok(_) => return Ok(()),
+            Err(e) => return Err(e),
         }
     }
 
@@ -107,8 +108,7 @@ impl<'a> IOManager<'a> {
                     for task in tasks {
                         task.print_task();
                     }
-                }
-                else {
+                } else {
                     println!("There is no task created yet.");
                 }
             }
@@ -118,7 +118,8 @@ impl<'a> IOManager<'a> {
 }
 
 mod test {
-    use super::*;
+    #[allow(unused)]
+    use super::{IOManager, Path, Task};
 
     #[test]
     fn write_tasks() {
@@ -126,10 +127,11 @@ mod test {
         let t2 = Task::new("write_tasks 2".to_string());
 
         let io_manager = IOManager::new(&Path::new("./tasks1.json"));
-        io_manager.write_task(vec![t1, t2]);
+        io_manager.write_task(vec![t1, t2]).unwrap();
         let al_task_from_file = io_manager.get_all_tasks().unwrap().unwrap();
-        assert_eq!(al_task_from_file[0].id, "45");
-        assert_eq!(al_task_from_file[1].id, "42");
+
+        assert_eq!(al_task_from_file[0].description, "write_tasks 1 ");
+        assert_eq!(al_task_from_file[1].description, "write_tasks 2");
         io_manager.remove_file();
     }
 
@@ -139,10 +141,13 @@ mod test {
         let t2 = Task::new("remove_tasks 2".to_string());
 
         let io_manager = IOManager::new(&Path::new("./tasks2.json"));
-        io_manager.write_task(vec![t1, t2]);
-        io_manager.remove_tasks(vec!["45".to_string()]);
+        io_manager.write_task(vec![t1, t2]).unwrap();
         let al_task_from_file = io_manager.get_all_tasks().unwrap().unwrap();
-        assert_eq!(al_task_from_file[0].id, "42");
+        let id = &al_task_from_file[0].id;
+        io_manager.remove_tasks(vec![id.to_owned()]).unwrap();
+
+        let al_task_from_file = io_manager.get_all_tasks().unwrap().unwrap();
+        assert_eq!(al_task_from_file[0].description, "remove_tasks 2");
         io_manager.remove_file();
     }
 }

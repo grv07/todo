@@ -14,21 +14,39 @@ fn parse_args() {
         .author("Gaurav Tyagi")
         .about("A simple task manager for CLI")
         .arg(
-            Arg::with_name("description")
-                .short("d")
-                .long("desc")
+            Arg::with_name("task")
+                .short("t")
+                .long("task")
                 .value_name("Text")
-                .help("Sets task description"),
+                .help("Create new task"),
+        )
+        .arg(
+            Arg::with_name("delete")
+                .short("d")
+                .long("delete")
+                .value_name("Text")
+                .help("Input ID of task to drop task"),
         )
         .get_matches();
 
     let io_manager = IOManager::new(&Path::new("./tasks.json"));
 
-    match matches.value_of("description") {
+    if let Some(id) = matches.value_of("delete") {
+        match io_manager.remove_tasks(vec![id.to_string()]) {
+            Ok(_) => {
+                println!("Successfully remove task :)");
+            },
+            Err(e) => println!("Error in removing task: {}",e)
+        }
+    }
+
+    match matches.value_of("task") {
         Some(task) => {
             let task = Task::new(task.to_string());
             // TODO: Create task obj should not required here.
-            io_manager.write_task(vec![task])
+            if let Ok(_) = io_manager.write_task(vec![task]) {
+                println!("Successfully write task :)");
+            }
         }
         None => {
             io_manager.print_task_to_cli();
