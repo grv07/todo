@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json;
 use uuid::Uuid;
+use colored::*;
 
 use std::fs::{File, OpenOptions};
 use std::io::{Error, Read, Write};
@@ -23,7 +24,7 @@ impl Task {
     }
 
     fn print_task(&self) {
-        println!("[{}]: {}", self.id, self.description);
+        println!("[{}]: {}", self.id.yellow(), self.description.green());
     }
 }
 

@@ -1,6 +1,7 @@
 mod taskmanager;
 
 use clap::{App, Arg};
+use colored::*;
 use std::path::Path;
 use taskmanager::{IOManager, Task};
 
@@ -34,9 +35,9 @@ fn parse_args() {
     if let Some(id) = matches.value_of("delete") {
         match io_manager.remove_tasks(vec![id.to_string()]) {
             Ok(_) => {
-                println!("Successfully remove task :)");
-            },
-            Err(e) => println!("Error in removing task: {}",e)
+                println!("{}", "Successfully remove task :)".green());
+            }
+            Err(e) => println!("{} {}", "Error in removing task: {}".red(), e),
         }
     }
 
@@ -45,7 +46,7 @@ fn parse_args() {
             let task = Task::new(task.to_string());
             // TODO: Create task obj should not required here.
             if let Ok(_) = io_manager.write_task(vec![task]) {
-                println!("Successfully write task :)");
+                println!("{}", "Successfully write task :)".green());
             }
         }
         None => {
