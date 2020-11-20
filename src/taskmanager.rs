@@ -1,10 +1,10 @@
+use colored::*;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use uuid::Uuid;
-use colored::*;
 
 use std::fs::{File, OpenOptions};
-use std::io::{Error, Read, Write};
+use std::io::{Error, ErrorKind, Read, Write};
 use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -28,11 +28,11 @@ impl Task {
     }
 }
 
-pub struct IOManager<'a> {
+pub struct TaskManager<'a> {
     file_path: &'a Path,
 }
 
-impl<'a> IOManager<'a> {
+impl<'a> TaskManager<'a> {
     pub fn new(file_path: &'a Path) -> Self {
         Self {
             file_path: file_path,
@@ -57,8 +57,8 @@ impl<'a> IOManager<'a> {
         if let Ok(file) = file {
             Some(file)
         } else {
-            dbg!("Unable to find file. Creating new at: {:?}", self.file_path);
-            dbg!("Unable creating new at: {:?}", self.file_path);
+            println!("Unable to find file. Creating new at: {:?}", self.file_path);
+            println!("Unable creating new at: {:?}", self.file_path);
             None
         }
     }
@@ -90,11 +90,20 @@ impl<'a> IOManager<'a> {
     pub fn remove_tasks(&self, ids: Vec<String>) -> Result<(), Error> {
         match self.get_all_tasks() {
             Ok(Some(mut tasks)) => {
+                let old_count = tasks.len();
                 tasks.retain(|x| !ids.contains(&x.id));
+                let new_count = tasks.len();
+                if old_count == new_count {
+                    return Err(Error::new(
+                        ErrorKind::Other,
+                        format!("No task found with give ID: {:?}", ids),
+                    ));
+                }
                 self.remove_file();
                 if tasks.len() > 0 {
                     return self.write_task(tasks);
                 }
+
                 Ok(())
             }
             Ok(_) => return Ok(()),
@@ -120,20 +129,20 @@ impl<'a> IOManager<'a> {
 
 mod test {
     #[allow(unused)]
-    use super::{IOManager, Path, Task};
+    use super::{Path, Task, TaskManager};
 
     #[test]
     fn write_tasks() {
         let t1 = Task::new("write_tasks 1 ".to_string());
         let t2 = Task::new("write_tasks 2".to_string());
 
-        let io_manager = IOManager::new(&Path::new("./tasks1.json"));
-        io_manager.write_task(vec![t1, t2]).unwrap();
-        let al_task_from_file = io_manager.get_all_tasks().unwrap().unwrap();
+        let task_manager = TaskManager::new(&Path::new("./tasks1.json"));
+        task_manager.write_task(vec![t1, t2]).unwrap();
+        let al_task_from_file = task_manager.get_all_tasks().unwrap().unwrap();
 
         assert_eq!(al_task_from_file[0].description, "write_tasks 1 ");
         assert_eq!(al_task_from_file[1].description, "write_tasks 2");
-        io_manager.remove_file();
+        task_manager.remove_file();
     }
 
     #[test]
@@ -141,14 +150,14 @@ mod test {
         let t1 = Task::new("remove_tasks 1".to_string());
         let t2 = Task::new("remove_tasks 2".to_string());
 
-        let io_manager = IOManager::new(&Path::new("./tasks2.json"));
-        io_manager.write_task(vec![t1, t2]).unwrap();
-        let al_task_from_file = io_manager.get_all_tasks().unwrap().unwrap();
+        let task_manager = TaskManager::new(&Path::new("./tasks2.json"));
+        task_manager.write_task(vec![t1, t2]).unwrap();
+        let al_task_from_file = task_manager.get_all_tasks().unwrap().unwrap();
         let id = &al_task_from_file[0].id;
-        io_manager.remove_tasks(vec![id.to_owned()]).unwrap();
+        task_manager.remove_tasks(vec![id.to_owned()]).unwrap();
 
-        let al_task_from_file = io_manager.get_all_tasks().unwrap().unwrap();
+        let al_task_from_file = task_manager.get_all_tasks().unwrap().unwrap();
         assert_eq!(al_task_from_file[0].description, "remove_tasks 2");
-        io_manager.remove_file();
+        task_manager.remove_file();
     }
 }

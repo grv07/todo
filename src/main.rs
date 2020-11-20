@@ -3,7 +3,7 @@ mod taskmanager;
 use clap::{App, Arg};
 use colored::*;
 use std::path::Path;
-use taskmanager::{IOManager, Task};
+use taskmanager::{TaskManager, Task};
 
 fn main() {
     parse_args();
@@ -30,14 +30,14 @@ fn parse_args() {
         )
         .get_matches();
 
-    let io_manager = IOManager::new(&Path::new("./tasks.json"));
+    let task_manager = TaskManager::new(&Path::new("./tasks.json"));
 
     if let Some(id) = matches.value_of("delete") {
-        match io_manager.remove_tasks(vec![id.to_string()]) {
+        match task_manager.remove_tasks(vec![id.to_string()]) {
             Ok(_) => {
                 println!("{}", "Successfully remove task :)".green());
             }
-            Err(e) => println!("{} {}", "Error in removing task: {}".red(), e),
+            Err(e) => println!("{} {}", "Error: ".red(), e.to_string().magenta()),
         }
     }
 
@@ -45,12 +45,12 @@ fn parse_args() {
         Some(task) => {
             let task = Task::new(task.to_string());
             // TODO: Create task obj should not required here.
-            if let Ok(_) = io_manager.write_task(vec![task]) {
+            if let Ok(_) = task_manager.write_task(vec![task]) {
                 println!("{}", "Successfully write task :)".green());
             }
         }
         None => {
-            io_manager.print_task_to_cli();
+            task_manager.print_task_to_cli();
         }
     }
 }
